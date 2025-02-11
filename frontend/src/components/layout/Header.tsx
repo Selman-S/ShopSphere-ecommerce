@@ -1,15 +1,23 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, User, LogOut, Package } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useCartStore } from '@/store/useCartStore';
 import { Button } from '@/components/ui/button';
 
 export function Header() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const [cartCount, setCartCount] = useState(0);
+  const getTotalItems = useCartStore((state) => state.getTotalItems);
+
+  useEffect(() => {
+    setCartCount(getTotalItems());
+  }, [getTotalItems]);
 
   const handleLogout = () => {
     logout();
@@ -45,9 +53,14 @@ export function Header() {
 
           {/* Right side buttons */}
           <div className="flex items-center space-x-4">
-            <Link href="/cart">
+            <Link href="/cart" className="relative">
               <Button variant="ghost" size="icon">
                 <ShoppingCart className="h-5 w-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
               </Button>
             </Link>
 
@@ -82,6 +95,15 @@ export function Header() {
                         </Link>
                       </DropdownMenu.Item>
                     )}
+                    <DropdownMenu.Item className="outline-none">
+                      <Link
+                        href="/orders"
+                        className="flex items-center px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
+                      >
+                        <Package className="h-4 w-4 mr-2" />
+                        My Orders
+                      </Link>
+                    </DropdownMenu.Item>
                     <DropdownMenu.Item className="outline-none">
                       <Link
                         href="/profile"

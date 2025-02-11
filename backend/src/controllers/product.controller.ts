@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Product } from '../models/product.model';
+import { ApiError } from '../utils/ApiError';
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -34,17 +35,18 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-// @desc    Get single product
-// @route   GET /api/products/:id
+// @desc    Get single product by slug
+// @route   GET /api/products/:slug
 // @access  Public
-export const getProductById = async (req: Request, res: Response): Promise<void> => {
+export const getProductBySlug = async (req: Request, res: Response): Promise<void> => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (product) {
-      res.json(product);
-    } else {
-      res.status(404).json({ message: 'Product not found' });
+    const product = await Product.findOne({ slug: req.params.slug });
+    
+    if (!product) {
+      throw new ApiError(404, 'Product not found');
     }
+    
+    res.json(product);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -55,11 +57,7 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
 // @access  Private/Admin
 export const createProduct = async (req: Request, res: Response): Promise<void> => {
   try {
-    const product = await Product.create({
-      ...req.body,
-      user: req.user._id,
-    });
-
+    const product = await Product.create(req.body);
     res.status(201).json(product);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -67,79 +65,83 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
 };
 
 // @desc    Update a product
-// @route   PUT /api/products/:id
+// @route   PUT /api/products/:slug
 // @access  Private/Admin
 export const updateProduct = async (req: Request, res: Response): Promise<void> => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOneAndUpdate(
+      { slug: req.params.slug },
+      req.body,
+      { new: true, runValidators: true }
+    );
 
-    if (product) {
-      Object.assign(product, req.body);
-      const updatedProduct = await product.save();
-      res.json(updatedProduct);
-    } else {
-      res.status(404).json({ message: 'Product not found' });
+    if (!product) {
+      throw new ApiError(404, 'Product not found');
     }
+
+    res.json(product);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }
 };
 
 // @desc    Delete a product
-// @route   DELETE /api/products/:id
+// @route   DELETE /api/products/:slug
 // @access  Private/Admin
 export const deleteProduct = async (req: Request, res: Response): Promise<void> => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOneAndDelete({ slug: req.params.slug });
 
-    if (product) {
-      await product.deleteOne();
-      res.json({ message: 'Product removed' });
-    } else {
-      res.status(404).json({ message: 'Product not found' });
+    if (!product) {
+      throw new ApiError(404, 'Product not found');
     }
+
+    res.json({ message: 'Product removed' });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }
 };
 
 // @desc    Create new review
-// @route   POST /api/products/:id/reviews
+// @route   POST /api/products/:slug/reviews
 // @access  Private
 export const createProductReview = async (req: Request, res: Response): Promise<void> => {
   try {
     const { rating, comment } = req.body;
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOne({ slug: req.params.slug });
 
-    if (product) {
-      const alreadyReviewed = product.reviews.find(
-        (review) => review.user.toString() === req.user._id.toString()
-      );
-
-      if (alreadyReviewed) {
-        res.status(400).json({ message: 'Product already reviewed' });
-        return;
-      }
-
-      const review = {
-        user: req.user._id,
-        name: req.user.name,
-        rating: Number(rating),
-        comment,
-        createdAt: new Date(),
-      };
-
-      product.reviews.push(review);
-      product.numReviews = product.reviews.length;
-      product.rating =
-        product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
-
-      await product.save();
-      res.status(201).json({ message: 'Review added' });
-    } else {
-      res.status(404).json({ message: 'Product not found' });
+    if (!product) {
+      throw new ApiError(404, 'Product not found');
     }
+
+    const alreadyReviewed = product.reviews.find(
+      (r) => r.user.toString() === req.user._id.toString()
+    );
+
+    if (alreadyReviewed) {
+      throw new ApiError(400, 'Product already reviewed');
+    }
+
+    const review = {
+      user: req.user._id,
+      name: req.user.name,
+      rating: Number(rating),
+      comment,
+      createdAt: new Date(),
+    };
+
+    product.reviews.push(review);
+    product.numReviews = product.reviews.length;
+    product.rating =
+      product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
+
+    await product.save();
+    res.status(201).json({ message: 'Review added' });
   } catch (error: any) {
-    res.status(400).json({ message: error.message });
+    if (error instanceof ApiError) {
+      res.status(error.statusCode).json({ message: error.message });
+    } else {
+      res.status(400).json({ message: error.message });
+    }
   }
 }; 

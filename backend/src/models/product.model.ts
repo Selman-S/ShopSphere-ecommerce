@@ -1,7 +1,21 @@
 import mongoose from 'mongoose';
 
+const turkishToEnglish = (text: string): string => {
+  const charMap: { [key: string]: string } = {
+    'ı': 'i', 'İ': 'i',
+    'ğ': 'g', 'Ğ': 'g',
+    'ü': 'u', 'Ü': 'u',
+    'ş': 's', 'Ş': 's',
+    'ö': 'o', 'Ö': 'o',
+    'ç': 'c', 'Ç': 'c',
+  };
+  
+  return text.replace(/[ıİğĞüÜşŞöÖçÇ]/g, match => charMap[match]);
+};
+
 export interface IProduct {
   name: string;
+  slug: string;
   description: string;
   price: number;
   category: string;
@@ -27,6 +41,10 @@ const productSchema = new mongoose.Schema<IProduct>(
       type: String,
       required: [true, 'Please add a product name'],
       trim: true,
+    },
+    slug: {
+      type: String,
+      unique: true,
     },
     description: {
       type: String,
@@ -100,7 +118,36 @@ const productSchema = new mongoose.Schema<IProduct>(
   }
 );
 
+// Generate slug from name before saving
+productSchema.pre('save', function(next) {
+  if (!this.isModified('name')) {
+    next();
+    return;
+  }
+  
+  // Convert Turkish characters to English and create slug
+  const normalizedName = turkishToEnglish(this.name);
+  this.slug = normalizedName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+
+  next();
+});
+
+// Handle duplicate slug errors
+productSchema.post('save', function(error: any, doc: any, next: any) {
+  if (error.name === 'MongoServerError' && error.code === 11000 && error.keyPattern?.slug) {
+    const timestamp = Date.now();
+    doc.slug = `${doc.slug}-${timestamp}`;
+    doc.save();
+  } else {
+    next(error);
+  }
+});
+
 // Add index for search functionality
 productSchema.index({ name: 'text', description: 'text' });
+productSchema.index({ slug: 1 });
 
 export const Product = mongoose.model<IProduct>('Product', productSchema); 
