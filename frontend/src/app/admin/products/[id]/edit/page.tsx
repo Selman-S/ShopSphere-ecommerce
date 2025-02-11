@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { ImagePlus, Loader2, Link as LinkIcon, X } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
+
 const schema = yup.object().shape({
   name: yup.string().required('Product name is required'),
   description: yup.string().required('Description is required'),
@@ -35,13 +36,16 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const CLOUDINARY_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
-export default function NewProductPage() {
+export default function EditProductPage() {
   const router = useRouter();
+  const { id } = useParams();
+  const { user } = useAuthStore();
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [currentImages, setCurrentImages] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState('');
-  const { user } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(true);
+
   const {
     register,
     handleSubmit,
@@ -50,6 +54,47 @@ export default function NewProductPage() {
   } = useForm<ProductFormData>({
     resolver: yupResolver(schema),
   });
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/login?redirect=/admin/products');
+      return;
+    }
+    
+    if (user.role !== 'admin') {
+      router.push('/');
+      return;
+    }
+
+    fetchProduct();
+  }, [id, user, router]);
+
+  const fetchProduct = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${API_URL}/products/${id}`, {
+        headers: {
+          Authorization: `Bearer ${user?.token}`,
+        },
+      });
+      const product = response.data;
+
+      // Set form values
+      setValue('name', product.name);
+      setValue('description', product.description);
+      setValue('price', product.price);
+      setValue('category', product.category);
+      setValue('brand', product.brand);
+      setValue('countInStock', product.countInStock);
+
+      // Set current images
+      setCurrentImages(product.images);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error fetching product');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const uploadToCloudinary = async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -109,22 +154,30 @@ export default function NewProductPage() {
         images: currentImages,
       };
 
-      await axios.post(`${API_URL}/products`, productData,  {
+      await axios.put(`${API_URL}/products/${id}`, productData, {
         headers: {
           Authorization: `Bearer ${user?.token}`,
         },
       });
 
-      toast.success('Product created successfully');
+      toast.success('Product updated successfully');
       router.push('/admin/products');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error creating product');
+      toast.error(error.response?.data?.message || 'Error updating product');
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Add New Product</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Product</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded-lg shadow">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -289,10 +342,10 @@ export default function NewProductPage() {
             {(isSubmitting || isUploading) ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {isUploading ? 'Uploading Images...' : 'Creating Product...'}
+                {isUploading ? 'Uploading Images...' : 'Updating Product...'}
               </>
             ) : (
-              'Create Product'
+              'Update Product'
             )}
           </Button>
         </div>

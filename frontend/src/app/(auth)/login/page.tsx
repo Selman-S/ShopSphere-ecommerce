@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { loginSchema } from '@/lib/validations/auth';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type LoginFormData = {
   email: string;
@@ -45,50 +47,45 @@ export default function LoginPage() {
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
-              <input
-                {...register('email')}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email address</Label>
+              <Input
+                id="email"
                 type="email"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                {...register('email')}
+                placeholder="Enter your email"
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                <p className="text-sm text-red-600">{errors.email.message}</p>
               )}
             </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                {...register('password')}
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
                 type="password"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                {...register('password')}
+                placeholder="Enter your password"
               />
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                <p className="text-sm text-red-600">{errors.password.message}</p>
               )}
             </div>
           </div>
 
           {error && (
-            <div className="text-center text-red-600 text-sm">{error}</div>
+            <div className="text-center text-sm text-red-600">{error}</div>
           )}
 
-          <div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Signing in...' : 'Sign in'}
-            </Button>
-          </div>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Signing in...' : 'Sign in'}
+          </Button>
 
           <div className="text-sm text-center">
             <Link

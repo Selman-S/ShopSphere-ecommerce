@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
@@ -8,13 +8,84 @@ import { Button } from '@/components/ui/button';
 import { useProductStore } from '@/store/useProductStore';
 import { toast } from 'sonner';
 
+const ProductTableSkeleton = () => {
+  return (
+    <div className="bg-white rounded-lg shadow overflow-hidden animate-pulse">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left">
+                <div className="h-4 w-20 bg-gray-200 rounded" />
+              </th>
+              <th className="px-6 py-3 text-left">
+                <div className="h-4 w-16 bg-gray-200 rounded" />
+              </th>
+              <th className="px-6 py-3 text-left">
+                <div className="h-4 w-12 bg-gray-200 rounded" />
+              </th>
+              <th className="px-6 py-3 text-left">
+                <div className="h-4 w-12 bg-gray-200 rounded" />
+              </th>
+              <th className="px-6 py-3 text-left">
+                <div className="h-4 w-14 bg-gray-200 rounded" />
+              </th>
+              <th className="px-6 py-3 text-right">
+                <div className="h-4 w-16 bg-gray-200 rounded ml-auto" />
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...Array(5)].map((_, index) => (
+              <tr key={index} className="border-t border-gray-200">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="h-10 w-10 bg-gray-200 rounded-md" />
+                    <div className="ml-4">
+                      <div className="h-4 w-24 bg-gray-200 rounded mb-2" />
+                      <div className="h-3 w-16 bg-gray-200 rounded" />
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="h-4 w-20 bg-gray-200 rounded" />
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="h-4 w-16 bg-gray-200 rounded" />
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="h-4 w-12 bg-gray-200 rounded" />
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="h-5 w-16 bg-gray-200 rounded-full" />
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <div className="flex justify-end space-x-2">
+                    <div className="h-8 w-8 bg-gray-200 rounded" />
+                    <div className="h-8 w-8 bg-gray-200 rounded" />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 export default function AdminProductsPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const { products, isLoading, error, deleteProduct } = useProductStore();
+  const { products, isLoading, error, deleteProduct, fetchProducts } = useProductStore();
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+console.log(products);
 
   const handleDeleteProduct = async (productId: string) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
@@ -29,7 +100,20 @@ export default function AdminProductsPage() {
 
   if (isLoading) {
     return (
-      <div className="text-center">Loading products...</div>
+      <div>
+        <div className="flex justify-between items-center mb-6">
+          <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
+          <div className="h-10 w-40 bg-gray-200 rounded animate-pulse" />
+        </div>
+
+        <div className="mb-6">
+          <div className="relative">
+            <div className="h-10 w-80 bg-gray-200 rounded animate-pulse" />
+          </div>
+        </div>
+
+        <ProductTableSkeleton />
+      </div>
     );
   }
 
@@ -145,7 +229,7 @@ export default function AdminProductsPage() {
                         size="sm"
                         asChild
                       >
-                        <Link href={`/admin/products/${product._id}/edit`}>
+                        <Link href={`/admin/products/${product.slug}/edit`}>
                           <Pencil className="h-4 w-4" />
                         </Link>
                       </Button>

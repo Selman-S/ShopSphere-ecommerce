@@ -35,6 +35,8 @@ export interface IOrder {
   paidAt?: Date;
   isDelivered: boolean;
   deliveredAt?: Date;
+  shippingInfo: mongoose.Types.ObjectId;
+  isShipped: boolean; 
   createdAt: Date;
   updatedAt: Date;
 }
@@ -111,6 +113,11 @@ const orderSchema = new mongoose.Schema<IOrder>(
     },
     deliveredAt: {
       type: Date,
+    },
+    isShipped: {
+      type: Boolean,
+      required: true,
+      default: false,
     },
   },
   {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -10,6 +10,7 @@ import {
   Users,
   ShoppingBag,
   Settings,
+  Loader2,
 } from 'lucide-react';
 
 const sidebarLinks = [
@@ -47,18 +48,52 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const { user } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login?redirect=/admin/dashboard');
-      return;
-    }
+    const checkAuth = async () => {
+      try {
+        // Check local storage first
+        const authData = localStorage.getItem('auth-storage');
+        const parsedAuthData = authData ? JSON.parse(authData) : null;
+        const storedUser = parsedAuthData?.state?.user;
 
-    if (user.role !== 'admin') {
-      router.push('/');
-    }
-  }, [user, router]);
+        if (!storedUser) {
+          router.push('/login?redirect=/admin/dashboard');
+          return;
+        }
 
+        if (storedUser.role !== 'admin') {
+          router.push('/');
+          return;
+        }
+
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error checking auth:', error);
+        router.push('/login?redirect=/admin/dashboard');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  // Show loading state
+  if (isLoading || !isInitialized) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+          <span className="text-lg font-medium">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show nothing if not authenticated or not admin
   if (!user || user.role !== 'admin') {
     return null;
   }
