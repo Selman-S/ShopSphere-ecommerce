@@ -23,7 +23,7 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
       .limit(pageSize)
       .skip(pageSize * (page - 1))
       .sort({ createdAt: -1 });
-console.log(products);
+
 
     res.json({
       products,

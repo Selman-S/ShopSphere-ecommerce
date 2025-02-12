@@ -1,23 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Package, Truck, CreditCard, CheckCircle } from 'lucide-react';
+import { Package, Truck, CreditCard, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOrderStore } from '@/store/useOrderStore';
-import { toast } from 'sonner';
+import { useAuthStore } from '@/store/useAuthStore';
 
-export default function OrderDetailsPage() {
+export default function OrderDetailPage() {
   const { id } = useParams();
+  const router = useRouter();
+  const { user } = useAuthStore();
   const { currentOrder, isLoading, error, getOrderById } = useOrderStore();
 
   useEffect(() => {
+    if (!user) {
+      router.push('/login?redirect=/order/' + id);
+      return;
+    }
+
     if (typeof id === 'string') {
       getOrderById(id);
     }
-  }, [id, getOrderById]);
+  }, [id, user, router, getOrderById]);
 
   if (isLoading) {
     return (
@@ -61,15 +68,26 @@ export default function OrderDetailsPage() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
-                <Package className="h-5 w-5 text-indigo-600 mr-2" />
-                <span className="font-medium">Order Status</span>
+                <CreditCard className="h-5 w-5 text-indigo-600 mr-2" />
+                <span className="font-medium">Payment Status</span>
               </div>
               <div className={`px-3 py-1 rounded-full text-sm ${
                 currentOrder.isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
               }`}>
-                {currentOrder.isPaid ? 'Paid' : 'Pending Payment'}
+                {currentOrder.isPaid ? (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Paid on {new Date(currentOrder.paidAt!).toLocaleDateString()}
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Pending Payment
+                  </div>
+                )}
               </div>
             </div>
+
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <Truck className="h-5 w-5 text-indigo-600 mr-2" />
@@ -78,7 +96,17 @@ export default function OrderDetailsPage() {
               <div className={`px-3 py-1 rounded-full text-sm ${
                 currentOrder.isDelivered ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
               }`}>
-                {currentOrder.isDelivered ? 'Delivered' : 'In Transit'}
+                {currentOrder.isDelivered ? (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Delivered on {new Date(currentOrder.deliveredAt!).toLocaleDateString()}
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Package className="h-4 w-4 mr-1" />
+                    In Transit
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -91,22 +119,8 @@ export default function OrderDetailsPage() {
                 {currentOrder.shippingAddress.fullName}<br />
                 {currentOrder.shippingAddress.address}<br />
                 {currentOrder.shippingAddress.city}, {currentOrder.shippingAddress.postalCode}<br />
-                {currentOrder.shippingAddress.country}<br />
-                Phone: {currentOrder.shippingAddress.phone}
+                {currentOrder.shippingAddress.country}
               </p>
-            </div>
-          </div>
-
-          {/* Payment Method */}
-          <div className="mb-8">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Payment Method</h2>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center">
-                <CreditCard className="h-5 w-5 text-indigo-600 mr-2" />
-                <p className="text-sm text-gray-600 capitalize">
-                  {currentOrder.paymentMethod.replace('-', ' ')}
-                </p>
-              </div>
             </div>
           </div>
 
@@ -158,6 +172,10 @@ export default function OrderDetailsPage() {
                 <span>Shipping</span>
                 <span>${currentOrder.shippingPrice.toFixed(2)}</span>
               </div>
+              <div className="flex justify-between text-base text-gray-600">
+                <span>Tax</span>
+                <span>${currentOrder.taxPrice.toFixed(2)}</span>
+              </div>
               <div className="border-t border-gray-200 pt-4 flex justify-between text-lg font-medium text-gray-900">
                 <span>Total</span>
                 <span>${currentOrder.totalPrice.toFixed(2)}</span>
@@ -166,10 +184,17 @@ export default function OrderDetailsPage() {
           </div>
 
           {/* Actions */}
-          <div className="mt-8 flex justify-end">
-            <Button asChild>
-              <Link href="/products">Continue Shopping</Link>
+          <div className="mt-8 flex justify-end space-x-4">
+            <Button asChild variant="outline">
+              <Link href="/orders">Back to Orders</Link>
             </Button>
+            {!currentOrder.isPaid && (
+              <Button asChild>
+                <Link href={`/checkout/payment?orderId=${currentOrder._id}`}>
+                  Pay Now
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </div>

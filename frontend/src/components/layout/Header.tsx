@@ -13,7 +13,11 @@ export function Header() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const { items, getTotalItems } = useCartStore();
-  const cartCount = getTotalItems();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -52,9 +56,9 @@ export function Header() {
             <Link href="/cart" className="relative">
               <Button variant="ghost" size="icon">
                 <ShoppingCart className="h-5 w-5" />
-                {cartCount > 0 && (
+                {mounted && getTotalItems() > 0 && (
                   <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {cartCount}
+                    {getTotalItems()}
                   </span>
                 )}
               </Button>

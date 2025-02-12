@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 export default function ProductDetailPage() {
   const { slug } = useParams();
   const { selectedProduct, isLoading, error, fetchProductBySlug } = useProductStore();
-  const { items, addItem, updateQuantity } = useCartStore();
+  const { items, addItem, updateQuantity, removeItem } = useCartStore();
 
   useEffect(() => {
     if (typeof slug === 'string') {
@@ -38,7 +38,15 @@ export default function ProductDetailPage() {
   };
 
   const handleUpdateQuantity = (newQuantity: number) => {
-    if (selectedProduct && newQuantity > 0 && newQuantity <= selectedProduct.countInStock) {
+    if (!selectedProduct) return;
+
+    if (newQuantity < 1) {
+      removeItem(selectedProduct._id);
+      toast.success('Removed from cart');
+      return;
+    }
+
+    if (newQuantity <= selectedProduct.countInStock) {
       updateQuantity(selectedProduct._id, newQuantity);
     }
   };
@@ -146,7 +154,6 @@ export default function ProductDetailPage() {
                   variant="outline"
                   size="icon"
                   onClick={() => handleUpdateQuantity(cartItem.quantity - 1)}
-                  disabled={cartItem.quantity <= 1}
                 >
                   <Minus className="h-4 w-4" />
                 </Button>

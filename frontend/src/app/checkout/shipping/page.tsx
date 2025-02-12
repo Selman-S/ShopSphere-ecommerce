@@ -1,13 +1,15 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCartStore } from '@/store/useCartStore';
+import { useOrderStore } from '@/store/useOrderStore';
 import { toast } from 'sonner';
 
 const shippingSchema = yup.object().shape({
@@ -24,6 +26,8 @@ type ShippingFormData = yup.InferType<typeof shippingSchema>;
 export default function ShippingPage() {
   const router = useRouter();
   const { items, getTotalPrice } = useCartStore();
+  const { setShippingAddress } = useOrderStore();
+  const [isInitialized, setIsInitialized] = useState(false);
   
   const {
     register,
@@ -31,22 +35,56 @@ export default function ShippingPage() {
     formState: { errors, isSubmitting },
   } = useForm<ShippingFormData>({
     resolver: yupResolver(shippingSchema),
+    defaultValues: typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('shippingAddress') || '{}')
+      : {},
   });
+
+  // Initial cart check
+  useEffect(() => {
+    if (!isInitialized && typeof window !== 'undefined') {
+      if (items.length === 0) {
+        router.push('/cart');
+      }
+      setIsInitialized(true);
+    }
+  }, [items.length, router, isInitialized]);
 
   const onSubmit = async (data: ShippingFormData) => {
     try {
-      // Save shipping address to localStorage
+      if (items.length === 0) {
+        toast.error('Your cart is empty');
+        router.push('/cart');
+        return;
+      }
+
+      setShippingAddress(data);
       localStorage.setItem('shippingAddress', JSON.stringify(data));
-      router.push('/checkout/payment');
+      
+      // Use replace instead of push to avoid back button issues
+      router.replace('/checkout/payment');
     } catch (error) {
+      console.error('Shipping submission error:', error);
       toast.error('Something went wrong. Please try again.');
     }
   };
 
-  // Redirect if cart is empty
-  if (items.length === 0) {
-    router.push('/cart');
+  // Don't render anything until we've done our initial check
+  if (!isInitialized) {
     return null;
+  }
+
+  // If cart is empty after initialization, show a message instead of redirecting
+  if (items.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Your cart is empty</h1>
+        <p className="text-gray-600 mb-8">Add some items to your cart to proceed with checkout.</p>
+        <Button onClick={() => router.push('/products')}>
+          Continue Shopping
+        </Button>
+      </div>
+    );
   }
 
   return (
