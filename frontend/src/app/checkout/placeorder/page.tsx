@@ -27,8 +27,15 @@ export default function PlaceOrderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [orderSuccess, setOrderSuccess] = useState<{ orderId: string } | null>(null);
 
   useEffect(() => {
+    // Check if cart is empty
+    if (items.length === 0) {
+      router.push('/cart');
+      return;
+    }
+
     // Check if shipping address and payment method exist
     const savedAddress = localStorage.getItem('shippingAddress');
     const savedPaymentMethod = localStorage.getItem('paymentMethod');
@@ -40,13 +47,20 @@ export default function PlaceOrderPage() {
 
     setShippingAddress(JSON.parse(savedAddress));
     setPaymentMethod(savedPaymentMethod);
-  }, [router]);
+  }, [router, items.length]);
 
-  // Redirect if cart is empty
-  if (items.length === 0) {
-    router.push('/cart');
-    return null;
-  }
+  // Handle successful order creation
+  useEffect(() => {
+    if (orderSuccess) {
+      // Clear cart and local storage
+      clearCart();
+      localStorage.removeItem('shippingAddress');
+      localStorage.removeItem('paymentMethod');
+      
+      // Redirect to order details
+      router.push(`/order/${orderSuccess.orderId}`);
+    }
+  }, [orderSuccess, router, clearCart]);
 
   const handlePlaceOrder = async () => {
     try {
@@ -64,8 +78,11 @@ export default function PlaceOrderPage() {
         paymentMethod,
         itemsPrice: getTotalPrice(),
         shippingPrice: 10,
+        taxPrice: 0,
         totalPrice: getTotalPrice() + 10,
       };
+
+      console.log('Attempting to create order:', order);
 
       const config = {
         headers: {
@@ -74,17 +91,20 @@ export default function PlaceOrderPage() {
         },
       };
 
+      console.log('Request config:', config);
+
       const { data } = await axios.post(`${API_URL}/orders`, order, config);
+      console.log('Order created successfully:', data);
 
-      // Clear cart and local storage
-      clearCart();
-      localStorage.removeItem('shippingAddress');
-      localStorage.removeItem('paymentMethod');
-
-      // Redirect to order details
-      router.push(`/order/${data._id}`);
+      // Set order success state instead of directly navigating
+      setOrderSuccess({ orderId: data._id });
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to place order');
+      console.error('Error creating order:', error);
+      console.error('Error response:', error.response?.data);
+      toast.error(
+        error.response?.data?.message || 
+        'Failed to place order. Please try again or contact support if the problem persists.'
+      );
       setIsLoading(false);
     }
   };

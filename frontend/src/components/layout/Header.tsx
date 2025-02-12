@@ -12,12 +12,8 @@ import { Button } from '@/components/ui/button';
 export function Header() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const [cartCount, setCartCount] = useState(0);
-  const getTotalItems = useCartStore((state) => state.getTotalItems);
-
-  useEffect(() => {
-    setCartCount(getTotalItems());
-  }, [getTotalItems]);
+  const { items, getTotalItems } = useCartStore();
+  const cartCount = getTotalItems();
 
   const handleLogout = () => {
     logout();

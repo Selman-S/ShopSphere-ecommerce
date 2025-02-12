@@ -14,12 +14,25 @@ export default function OrdersPage() {
   const { orders, isLoading, error, getMyOrders } = useOrderStore();
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login?redirect=/orders');
-      return;
-    }
-    getMyOrders();
+    const checkAuthAndFetchOrders = async () => {
+      if (!user) {
+        router.push('/login?redirect=/orders');
+        return;
+      }
+
+      try {
+        await getMyOrders();
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      }
+    };
+
+    checkAuthAndFetchOrders();
   }, [user, router, getMyOrders]);
+
+  if (!user) {
+    return null; // Will redirect in useEffect
+  }
 
   if (isLoading) {
     return (
@@ -67,7 +80,7 @@ export default function OrdersPage() {
                   href={`/order/${order._id}`}
                   className="text-lg font-medium text-indigo-600 hover:text-indigo-500"
                 >
-                  Order #{order._id}
+                  Order {order.orderNumber}
                 </Link>
                 <div className="flex items-center text-sm text-gray-500">
                   <Clock className="h-4 w-4 mr-1" />

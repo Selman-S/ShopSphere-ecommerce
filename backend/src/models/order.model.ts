@@ -17,6 +17,7 @@ export interface IShippingAddress {
 }
 
 export interface IOrder {
+  orderNumber: string;
   user: mongoose.Types.ObjectId;
   orderItems: IOrderItem[];
   shippingAddress: IShippingAddress;
@@ -43,6 +44,10 @@ export interface IOrder {
 
 const orderSchema = new mongoose.Schema<IOrder>(
   {
+    orderNumber: {
+      type: String,
+      unique: true,
+    },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
@@ -124,5 +129,20 @@ const orderSchema = new mongoose.Schema<IOrder>(
     timestamps: true,
   }
 );
+
+// Pre-save middleware to generate order number
+orderSchema.pre('save', async function(next) {
+  if (this.isNew) {
+    const count = await mongoose.model('Order').countDocuments();
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    
+    // Format: SP-YYMMDD-XXXX (SP: ShopSphere, YY: Year, MM: Month, DD: Day, XXXX: Sequential Number)
+    this.orderNumber = `SP-${year}${month}${day}-${(count + 1).toString().padStart(4, '0')}`;
+  }
+  next();
+});
 
 export const Order = mongoose.model<IOrder>('Order', orderSchema); 

@@ -50,7 +50,7 @@ export default function OrderDetailsPage() {
           {/* Order Header */}
           <div className="border-b pb-6 mb-6">
             <h1 className="text-2xl font-bold text-gray-900">
-              Order #{currentOrder._id}
+              Order {currentOrder.orderNumber}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Placed on {new Date(currentOrder.createdAt).toLocaleDateString()}

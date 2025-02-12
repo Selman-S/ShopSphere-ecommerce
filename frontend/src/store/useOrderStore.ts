@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import axios from 'axios';
+import { useAuthStore } from './useAuthStore';
 
 interface ShippingAddress {
   fullName: string;
@@ -20,6 +21,7 @@ interface OrderItem {
 
 interface Order {
   _id: string;
+  orderNumber: string;
   user: string;
   orderItems: OrderItem[];
   shippingAddress: ShippingAddress;
@@ -69,10 +71,15 @@ export const useOrderStore = create<OrderState>()((set, get) => ({
 
   createOrder: async (orderData) => {
     try {
+      const user = useAuthStore.getState().user;
+      if (!user?.token) {
+        throw new Error('Not authenticated');
+      }
+
       set({ isLoading: true, error: null });
       const response = await axios.post(`${API_URL}/orders`, orderData, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${user.token}`,
         },
       });
       set({ currentOrder: response.data, isLoading: false });
@@ -88,10 +95,15 @@ export const useOrderStore = create<OrderState>()((set, get) => ({
 
   getOrderById: async (orderId) => {
     try {
+      const user = useAuthStore.getState().user;
+      if (!user?.token) {
+        throw new Error('Not authenticated');
+      }
+
       set({ isLoading: true, error: null });
       const response = await axios.get(`${API_URL}/orders/${orderId}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${user.token}`,
         },
       });
       set({ currentOrder: response.data, isLoading: false });
@@ -105,10 +117,15 @@ export const useOrderStore = create<OrderState>()((set, get) => ({
 
   getMyOrders: async () => {
     try {
+      const user = useAuthStore.getState().user;
+      if (!user?.token) {
+        throw new Error('Not authenticated');
+      }
+
       set({ isLoading: true, error: null });
       const response = await axios.get(`${API_URL}/orders/myorders`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${user.token}`,
         },
       });
       set({ orders: response.data, isLoading: false });
@@ -122,13 +139,18 @@ export const useOrderStore = create<OrderState>()((set, get) => ({
 
   payOrder: async (orderId, paymentResult) => {
     try {
+      const user = useAuthStore.getState().user;
+      if (!user?.token) {
+        throw new Error('Not authenticated');
+      }
+
       set({ isLoading: true, error: null });
       const response = await axios.put(
         `${API_URL}/orders/${orderId}/pay`,
         paymentResult,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${user.token}`,
           },
         }
       );

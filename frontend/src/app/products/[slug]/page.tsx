@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { Star, ShoppingCart, Heart } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProductStore } from '@/store/useProductStore';
 import { useCartStore } from '@/store/useCartStore';
@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 export default function ProductDetailPage() {
   const { slug } = useParams();
   const { selectedProduct, isLoading, error, fetchProductBySlug } = useProductStore();
-  const addToCart = useCartStore((state) => state.addItem);
+  const { items, addItem, updateQuantity } = useCartStore();
 
   useEffect(() => {
     if (typeof slug === 'string') {
@@ -20,9 +20,11 @@ export default function ProductDetailPage() {
     }
   }, [slug, fetchProductBySlug]);
 
+  const cartItem = items.find((item) => item._id === selectedProduct?._id);
+
   const handleAddToCart = () => {
     if (selectedProduct) {
-      addToCart({
+      addItem({
         _id: selectedProduct._id,
         name: selectedProduct.name,
         slug: selectedProduct.slug,
@@ -32,6 +34,12 @@ export default function ProductDetailPage() {
         countInStock: selectedProduct.countInStock,
       });
       toast.success('Added to cart');
+    }
+  };
+
+  const handleUpdateQuantity = (newQuantity: number) => {
+    if (selectedProduct && newQuantity > 0 && newQuantity <= selectedProduct.countInStock) {
+      updateQuantity(selectedProduct._id, newQuantity);
     }
   };
 
@@ -132,15 +140,37 @@ export default function ProductDetailPage() {
 
           {/* Actions */}
           <div className="flex space-x-4">
-            <Button
-              size="lg"
-              className="flex-1"
-              disabled={selectedProduct.countInStock === 0}
-              onClick={handleAddToCart}
-            >
-              <ShoppingCart className="h-5 w-5 mr-2" />
-              Add to Cart
-            </Button>
+            {cartItem ? (
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleUpdateQuantity(cartItem.quantity - 1)}
+                  disabled={cartItem.quantity <= 1}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <span className="text-lg font-medium">{cartItem.quantity}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleUpdateQuantity(cartItem.quantity + 1)}
+                  disabled={cartItem.quantity >= selectedProduct.countInStock}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="lg"
+                className="flex-1"
+                disabled={selectedProduct.countInStock === 0}
+                onClick={handleAddToCart}
+              >
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                Add to Cart
+              </Button>
+            )}
             <Button size="lg" variant="outline">
               <Heart className="h-5 w-5" />
             </Button>

@@ -7,6 +7,9 @@ import { ApiError } from '../utils/ApiError';
 // @access  Private
 export const createOrder = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('Received order creation request:', req.body);
+    console.log('User from request:', req.user);
+
     const {
       orderItems,
       shippingAddress,
@@ -17,8 +20,16 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       totalPrice,
     } = req.body;
 
-    if (orderItems && orderItems.length === 0) {
+    if (!orderItems || orderItems.length === 0) {
       throw new ApiError(400, 'No order items');
+    }
+
+    if (!shippingAddress) {
+      throw new ApiError(400, 'Shipping address is required');
+    }
+
+    if (!paymentMethod) {
+      throw new ApiError(400, 'Payment method is required');
     }
 
     const order = await Order.create({
@@ -32,12 +43,14 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       totalPrice,
     });
 
+    console.log('Order created successfully:', order);
     res.status(201).json(order);
   } catch (error: any) {
+    console.error('Error creating order:', error);
     if (error instanceof ApiError) {
       res.status(error.statusCode).json({ message: error.message });
     } else {
-      res.status(400).json({ message: error.message });
+      res.status(400).json({ message: error.message || 'Failed to create order' });
     }
   }
 };
